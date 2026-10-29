@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https://script.google.com https://script.googleusercontent.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="theme-color" content="#0F5132">
+<meta name="description" content="GPI contractor entry and location check">
+<title>GPI Thekedar Entry</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><img src="icons/icon-192.png" alt="" width="32" height="32"><span>GPI Thekedar Entry</span></div>
+  <div class="who" id="who"></div>
+</header>
+
+<main class="wrap">
+  <!-- ============ LOGIN ============ -->
+  <section id="loginView" class="hidden" aria-labelledby="loginTitle">
+    <h1 id="loginTitle">Log in</h1>
+    <p class="hi" lang="hi">लॉग इन करें</p>
+    <label for="lid">Contractor ID</label>
+    <input id="lid" autocomplete="username" autocapitalize="characters" placeholder="e.g. TK0001" maxlength="20">
+    <label for="lpin">PIN</label>
+    <input id="lpin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12">
+
+    <div class="consent">
+      <p><strong>How this app uses your location</strong></p>
+      <ul>
+        <li>When you press <strong>Record entry</strong>, the app reads your phone's GPS once and sends it to GPI.</li>
+        <li>GPI uses it only to check whether you are inside the factory (GPI, Paras or Zahir).</li>
+        <li>The app does <strong>not</strong> track you in the background. You must open it and record an entry in every entry window.</li>
+        <li>GPI administrators can see your entries: time, location, GPS accuracy and result.</li>
+      </ul>
+      <label class="check"><input type="checkbox" id="consent"> I understand and agree</label>
+    </div>
+    <button class="primary" id="loginBtn" type="button">Log in</button>
+    <p class="msg" id="loginMsg" role="alert"></p>
+  </section>
+
+  <!-- ============ HOME ============ -->
+  <section id="homeView" class="hidden">
+    <div class="window" id="windowBand" aria-live="polite">
+      <p class="w-state" id="wState"></p>
+      <p class="w-time" id="wTime"></p>
+      <p class="hi" lang="hi" id="wHi"></p>
+    </div>
+
+    <button class="entry" id="entryBtn" type="button">
+      <span id="entryLabel">Record entry</span>
+      <span class="hi" lang="hi" id="entryHi">एंट्री दर्ज करें</span>
+    </button>
+    <p class="busy" id="busy" aria-live="polite"></p>
+
+    <div class="result" id="result" aria-live="polite">
+      <p class="r-label">Your last entry</p>
+      <p class="r-status" id="rStatus"></p>
+      <p class="hi" lang="hi" id="rHi"></p>
+      <p class="r-detail" id="rDetail"></p>
+    </div>
+
+    <div class="today">
+      <p class="t-label">Today's entry windows</p>
+      <ol class="punch" id="punch"></ol>
+    </div>
+
+    <ul class="checks" id="checks"></ul>
+
+    <details class="help">
+      <summary>Reminders and installing the app</summary>
+      <p id="alarmText"></p>
+      <p id="installText">To open this app quickly, use Chrome's menu (three dots) and choose <strong>Add to Home screen</strong> or <strong>Install app</strong>.</p>
+      <button class="secondary hidden" id="installBtn" type="button">Add to Home screen</button>
+    </details>
+
+    <button class="link" id="logoutBtn" type="button">Log out</button>
+  </section>
+</main>
+
+<footer class="foot" id="foot"></footer>
+
+<!-- simple dialog used for questions (retry / record as unverified) -->
+<div class="dialog hidden" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+  <div class="d-box">
+    <h2 id="dTitle"></h2>
+    <p id="dText"></p>
+    <div class="d-actions" id="dActions"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

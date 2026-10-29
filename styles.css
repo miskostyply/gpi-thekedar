@@ -1,0 +1,143 @@
+/* GPI Thekedar Entry - styles
+   Palette: GPI green, cool grey-green page, strong status colours for outdoor reading. System fonts (fast, offline, Hindi-capable). */
+:root {
+  --page: #EDF1EE;
+  --card: #FFFFFF;
+  --ink: #14231B;
+  --muted: #4E5F56;
+  --line: #CBD5CF;
+  --brand: #0F5132;
+  --brand-dark: #0A3A24;
+  --in: #15803D;   --in-bg: #DCFCE7;
+  --out: #B91C1C;  --out-bg: #FEE2E2;
+  --unv: #B45309;  --unv-bg: #FEF3C7;
+  --idle: #64748B; --idle-bg: #E2E8F0;
+  --radius-lg: 14px;
+  --radius-sm: 8px;
+  font-size: 17px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0E1612; --card: #17221C; --ink: #E7EFEA; --muted: #A3B5AB; --line: #2C3B33;
+    --in-bg: #12301E; --out-bg: #3A1414; --unv-bg: #3A2A0E; --idle-bg: #26312B;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", sans-serif;
+  line-height: 1.45;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.hidden { display: none !important; }
+
+/* ---------- header ---------- */
+.bar {
+  background: var(--brand); color: #fff;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; }
+.brand img { border-radius: 7px; }
+.who { font-size: .82rem; text-align: right; opacity: .95; }
+
+.wrap { max-width: 520px; margin: 0 auto; padding: 16px; }
+
+/* ---------- login ---------- */
+h1 { font-size: 1.55rem; margin: 6px 0 0; }
+.hi { margin: 0; color: var(--muted); font-size: .92rem; }
+label { display: block; font-weight: 600; margin: 16px 0 6px; }
+input[type=text], input:not([type]), input[type=password] {
+  width: 100%; font: inherit; font-size: 1.1rem; padding: 12px 14px;
+  border: 2px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--ink);
+}
+input:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid #2563EB; outline-offset: 2px; }
+.consent { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 4px 14px 10px; margin-top: 18px; font-size: .93rem; }
+.consent ul { padding-left: 18px; margin: 6px 0; }
+.consent li { margin: 4px 0; }
+label.check { display: flex; align-items: center; gap: 10px; font-weight: 600; margin: 10px 0 2px; }
+label.check input { width: 22px; height: 22px; accent-color: var(--brand); }
+button { font: inherit; cursor: pointer; }
+button.primary {
+  width: 100%; margin-top: 18px; min-height: 54px; font-size: 1.1rem; font-weight: 700;
+  background: var(--brand); color: #fff; border: 0; border-radius: var(--radius-sm);
+}
+button.primary:disabled { opacity: .55; cursor: default; }
+button.secondary { min-height: 46px; padding: 0 16px; background: var(--card); color: var(--brand); border: 2px solid var(--brand); border-radius: var(--radius-sm); font-weight: 700; }
+button.link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 14px 0; margin-top: 8px; }
+.msg { color: var(--out); font-weight: 600; min-height: 1.4em; margin: 12px 0 0; }
+
+/* ---------- the window band (the signature element) ---------- */
+.window {
+  border-radius: var(--radius-lg); padding: 18px 18px 16px; color: #fff; background: var(--idle);
+  transition: background-color .3s ease;
+}
+.window.open { background: var(--in); }
+.window.unset { background: var(--unv); }
+.w-state { margin: 0; font-size: 1.05rem; font-weight: 600; }
+.w-time { margin: 2px 0 4px; font-size: 2.6rem; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.window .hi { color: rgba(255,255,255,.92); }
+
+/* ---------- entry button ---------- */
+.entry {
+  width: 100%; margin-top: 14px; min-height: 92px; border: 0; border-radius: var(--radius-lg);
+  background: var(--brand); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  box-shadow: 0 4px 0 var(--brand-dark);
+}
+.entry span:first-child { font-size: 1.45rem; font-weight: 800; }
+.entry .hi { color: rgba(255,255,255,.9); }
+.entry:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 var(--brand-dark); }
+.entry:disabled { background: var(--idle-bg); color: var(--muted); box-shadow: none; cursor: default; }
+.entry:disabled .hi { color: var(--muted); }
+.busy { text-align: center; color: var(--muted); font-weight: 600; margin: 8px 0 0; }
+.busy:empty { display: none; }
+
+/* ---------- last result ---------- */
+.result { background: var(--card); border: 1px solid var(--line); border-left: 8px solid var(--idle); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 12px; }
+.result.in { border-left-color: var(--in); } .result.out { border-left-color: var(--out); } .result.unv { border-left-color: var(--unv); }
+.r-label { margin: 0; color: var(--muted); font-size: .85rem; }
+.r-status { margin: 2px 0 0; font-size: 1.5rem; font-weight: 800; }
+.result.in .r-status { color: var(--in); } .result.out .r-status { color: var(--out); } .result.unv .r-status { color: var(--unv); }
+.r-detail { margin: 6px 0 0; font-size: .92rem; color: var(--ink); white-space: pre-line; }
+
+/* ---------- today's punch strip ---------- */
+.today { margin-top: 16px; }
+.t-label { margin: 0 0 6px; font-weight: 700; }
+.punch { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.punch li { border-radius: var(--radius-sm); padding: 7px 4px 6px; text-align: center; font-size: .78rem; background: var(--card); border: 1px dashed var(--line); color: var(--muted); }
+.punch b { display: block; font-size: .95rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.punch li.in { background: var(--in-bg); border: 1px solid var(--in); color: var(--in); }
+.punch li.out { background: var(--out-bg); border: 1px solid var(--out); color: var(--out); }
+.punch li.unv { background: var(--unv-bg); border: 1px solid var(--unv); color: var(--unv); }
+.punch li.missed { background: var(--card); border: 2px solid var(--out); color: var(--out); }
+.punch li.now { border: 2px solid var(--brand); color: var(--brand); font-weight: 700; }
+.punch li.saved { background: var(--idle-bg); border: 1px solid var(--idle); color: var(--ink); }
+
+/* ---------- status checks ---------- */
+.checks { list-style: none; padding: 0; margin: 16px 0 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.checks li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: .92rem; }
+.checks li:first-child { border-top: 0; }
+.checks .v { font-weight: 700; text-align: right; }
+.checks .ok { color: var(--in); } .checks .bad { color: var(--out); } .checks .warn { color: var(--unv); }
+.checks .note { display: block; font-weight: 400; color: var(--muted); font-size: .85rem; }
+
+.help { margin-top: 14px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 14px; font-size: .93rem; }
+.help summary { font-weight: 700; cursor: pointer; min-height: 32px; }
+
+.foot { text-align: center; color: var(--muted); font-size: .78rem; padding: 6px 16px 24px; }
+
+/* ---------- dialog ---------- */
+.dialog { position: fixed; inset: 0; background: rgba(10, 20, 15, .6); display: flex; align-items: flex-end; justify-content: center; padding: 16px; z-index: 10; }
+.d-box { background: var(--card); color: var(--ink); width: 100%; max-width: 520px; border-radius: var(--radius-lg); padding: 18px; margin-bottom: env(safe-area-inset-bottom, 0px); }
+.d-box h2 { margin: 0 0 8px; font-size: 1.2rem; }
+.d-box p { margin: 0 0 14px; white-space: pre-line; }
+.d-actions { display: flex; flex-direction: column; gap: 8px; }
+.d-actions button { min-height: 50px; border-radius: var(--radius-sm); font-weight: 700; border: 2px solid var(--brand); background: var(--card); color: var(--brand); }
+.d-actions button.main { background: var(--brand); color: #fff; }
+
+/* tablets / desktops: keep the phone column, a little more breathing room */
+@media (min-width: 700px) {
+  .wrap { padding-top: 32px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
