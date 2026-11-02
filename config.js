@@ -8,5 +8,5 @@
  * Security comes from the contractor ID + PIN login checked on the server.
  */
 window.GPI_CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycbyxHgoPsYAb43OT0tuCyH13EXgzRLaulZiunSwJeT6GWmD_h1apPI4xCalxAvjq5uZCSw/exec"
+  API_URL: "https://script.google.com/a/macros/kostyply.com/s/AKfycbyxHgoPsYAb43OT0tuCyH13EXgzRLaulZiunSwJeT6GWmD_h1apPI4xCalxAvjq5uZCSw/exec"
 };
