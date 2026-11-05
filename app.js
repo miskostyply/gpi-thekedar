@@ -26,6 +26,7 @@
   var me = load(K.me, null);
   var st = load(K.state, {});       // offsetMs, schedule, settings, today[], thisWindow, lastEntry
   var busy = false, perm = 'unknown', installEvt = null, lastBandKey = '', flushing = null;
+  var statusSeq = 0; // a status reply is used only if nothing newer happened after it was requested
 
   function queue() { return load(K.queue, []); }
   function setQueue(q) { return save(K.queue, q); }
@@ -55,9 +56,28 @@
     return null;
   }
   function windowShift(startMs) { var e = dayEntry(startMs); return e ? e.shift : ''; }
-  function isMyWindow(startMs) {
-    if (!st.shift || st.shift === 'Both') return true;
-    var e = dayEntry(startMs); return e ? e.expected !== false : true;
+  // ---- today's shift: chosen once at the first entry of the work day, locked until the next work day starts ----
+  function workDayOf(ms) {
+    if (!st.workDayStartMs) return null;
+    return st.workDayStartMs + Math.floor((ms - st.workDayStartMs) / 86400000) * 86400000;
+  }
+  function curWorkDay() { return workDayOf(nowServer()); }
+  function pendingToday() { var wd = curWorkDay(); return st.pendingShift && wd && st.pendingShift.wdStartMs === wd ? st.pendingShift.shift : null; }
+  function declaredToday() { return st.todayShift && st.workDayStartMs === curWorkDay() ? st.todayShift.shift : null; }
+  function needsShiftChoice() {
+    if (!st.usualShift || st.usualShift === 'Both' || !curWorkDay()) return false;
+    return !declaredToday() && !pendingToday();
+  }
+  // null = not chosen yet today (every open window may be theirs)
+  function myShiftNow() {
+    if (st.usualShift === 'Both') return 'Both';
+    return pendingToday() || declaredToday() || (needsShiftChoice() ? null : (st.shift || 'Both'));
+  }
+  function shiftName(sh) { if (!st.shifts) return sh + ' shift'; return sh === 'Day' ? st.shifts.dayLabel : sh === 'Night' ? st.shifts.nightLabel : 'Both shifts'; }
+  function isMyWindow(startMs, sh) {
+    var s0 = sh || myShiftNow();
+    if (!s0 || s0 === 'Both') return true;
+    var e = dayEntry(startMs); return e ? e.shift === s0 : true;
   }
   function nextMyWindow(t) {
     var s = st.schedule, w = windowAt(t), c = w.inside ? w.nextStartMs : w.nextStartMs;
@@ -65,9 +85,11 @@
     return w.nextStartMs;
   }
   function shiftText() {
-    if (!st.shift || !st.shifts) return '';
-    if (st.shift === 'Both') return 'Both shifts';
-    return st.shift === 'Day' ? st.shifts.dayLabel : st.shifts.nightLabel;
+    if (!st.shifts || !st.usualShift) return '';
+    if (st.usualShift === 'Both') return 'Both shifts';
+    var p = pendingToday(); if (p) return 'Today: ' + shiftName(p) + ' (saving\u2026)';
+    var d = declaredToday(); if (d) return 'Today: ' + shiftName(d) + ', locked until ' + hhmm(curWorkDay() + 86400000);
+    return 'Usual: ' + shiftName(st.usualShift) + '. You choose today\u2019s shift at your first entry';
   }
   function accMax() { return (st.settings && st.settings.accuracyMaxM) || 100; }
 
@@ -133,11 +155,16 @@
   // ---------------------------------------------------------------- status from server
   function refreshStatus() {
     if (!token) return Promise.resolve();
+    var mySeq = ++statusSeq;
     return post({ action: 'status', token: token }).then(function (r) {
+      if (mySeq !== statusSeq) return; // an entry result or a newer refresh arrived meanwhile: this reply is out of date
       if (!r.ok) { if (r.error === 'AUTH') sessionEnded(); return; }
       st.offsetMs = r.serverNowMs - Date.now();
       st.schedule = r.schedule; st.today = r.today || []; st.settings = r.settings || st.settings;
       st.shift = r.shift || 'Both'; st.shifts = r.shifts || null;
+      st.usualShift = r.usualShift || st.shift; st.askShift = !!r.askShift; st.todayShift = r.todayShift || null;
+      st.workDayStartMs = r.workDayStartMs || null; st.lockedUntilMs = r.lockedUntilMs || null;
+      if (st.todayShift && st.pendingShift && st.pendingShift.wdStartMs === st.workDayStartMs) st.pendingShift = null; // server has it now
       st.thisWindow = r.schedule && r.schedule.open ? { startMs: r.schedule.currentStartMs, status: r.schedule.thisWindowStatus || '' } : null;
       if (r.lastEntry && r.lastEntry.ms && (!st.lastEntry || r.lastEntry.ms > st.lastEntry.ms)) {
         st.lastEntry = { ms: r.lastEntry.ms, status: r.lastEntry.status, verification: r.lastEntry.result };
@@ -175,6 +202,12 @@
     var q = batch.filter(function (b) { return b.rec.recordId === x.recordId; })[0];
     if (!q || q.rec.type !== 'ENTRY') return;
     var cap = q.rec.captureMs;
+    statusSeq++; // any status request already on its way predates this entry
+    var sh = x.shiftDeclared || x.shiftLocked;
+    if (sh && workDayOf(cap) === curWorkDay()) {
+      st.todayShift = { shift: sh, by: 'contractor', chosenMs: cap }; st.workDayStartMs = curWorkDay(); st.askShift = false; st.shift = sh;
+    }
+    if (sh && st.pendingShift && st.pendingShift.wdStartMs === workDayOf(cap)) st.pendingShift = null;
     if (!st.lastEntry || cap >= st.lastEntry.ms) {
       st.lastEntry = { ms: cap, status: x.status, verification: x.verification, distanceM: x.distanceM, branch: x.branch, remark: x.remark };
     }
@@ -275,11 +308,27 @@
   function doEntry() {
     var w = windowAt(nowServer());
     if (!w || !w.inside || busy) { render(); return; }
+    if (needsShiftChoice()) { askShiftChoice(); return; }
     openCamera().then(function (c) {
       if (c.cancel || !token || !me) return;
       if (c.fail) { askCamera(c.fail); return; }
       locateAndSubmit(c.photo);
     });
+  }
+
+  function askShiftChoice() {
+    var until = hhmm(curWorkDay() + 86400000);
+    ask('Which shift are you on today?', 'Choose once for today\u2019s work day. You cannot change it until ' + until + ' tomorrow. If you choose wrong, tell your supervisor.\n\nआज आपकी कौन सी शिफ्ट है?', [
+      { label: shiftName('Day'), fn: function () { confirmShift('Day'); } },
+      { label: shiftName('Night'), fn: function () { confirmShift('Night'); } },
+      { label: 'Cancel', plain: true }
+    ]);
+  }
+  function confirmShift(sh) {
+    ask('Confirm: ' + sh + ' shift today', 'You chose the ' + shiftName(sh) + ' for today. It stays locked until ' + hhmm(curWorkDay() + 86400000) + ' tomorrow.\n\nआज की शिफ्ट: ' + (sh === 'Day' ? 'दिन' : 'रात'), [
+      { label: 'Yes, ' + sh + ' shift', main: true, fn: function () { st.pendingShift = { shift: sh, wdStartMs: curWorkDay() }; saveState(); render(); doEntry(); } },
+      { label: 'Go back', fn: askShiftChoice }
+    ]);
   }
 
   function locateAndSubmit(photo) {
@@ -321,6 +370,7 @@
     if (!token || !me) { showLogin('Your login has ended. Log in again, then record the entry.'); return; }
     // Server-corrected time, so a slightly wrong phone clock does not push an entry outside its window.
     var rec = { recordId: uuid(), type: 'ENTRY', captureMs: Math.round(nowServer()), device: deviceInfo(), mock: false, photo: photo.dataUrl, photoMs: photo.ms };
+    var chosen = pendingToday(); if (chosen) rec.shiftChoice = chosen; // first entry of the work day carries the shift choice
     if (res.fix) {
       rec.captureResult = 'SUCCESS'; rec.lat = res.fix.lat; rec.lon = res.fix.lon; rec.accuracy = res.fix.acc; rec.fixAgeMs = res.fix.ageMs;
     } else {
@@ -332,6 +382,7 @@
     setBusy('Sending…');
     flush().then(function (r) {
       setBusy('');
+      if (r === 'DONE') refreshStatus(); // picks up today's shift and the updated punch card
       if (r === 'DONE' && st.lastEntry && st.lastEntry.ms > before) return; // result card shows the server's decision
       if (r === 'AUTH') return;
       ask('Saved on this phone', r === 'OFFLINE'
@@ -362,7 +413,7 @@
     var box = $('dActions'); box.innerHTML = '';
     buttons.forEach(function (b) {
       var el = document.createElement('button');
-      el.type = 'button'; el.textContent = b.label; if (b.main) el.className = 'main';
+      el.type = 'button'; el.textContent = b.label; if (b.main) el.className = 'main'; else if (b.plain) el.className = 'plain';
       el.addEventListener('click', function () { $('dialog').classList.add('hidden'); if (b.fn) b.fn(); });
       box.appendChild(el);
     });
@@ -374,7 +425,8 @@
 
   function render() {
     if (!token || !me) return;
-    setText('who', me.name + ' (' + me.id + ')' + (shiftText() ? ' \u00b7 ' + shiftText() : ''));
+    setText('who', me.name + ' (' + me.id + ')');
+    setText('shiftLine', shiftText());
     renderBand(); renderResult(); renderPunch(); renderChecks();
   }
 
@@ -411,7 +463,7 @@
         if (w.inside) { // a window of the OTHER shift is open: entry is optional (e.g. overtime)
           var other = windowShift(w.startMs);
           var doneO = st.thisWindow && st.thisWindow.startMs === w.startMs ? st.thisWindow.status : '';
-          setText('wState', (other ? other + '-shift' : 'Other-shift') + ' window open until ' + hhmm(w.endMs) + '. You are on the ' + (st.shift || '') + ' shift: no entry needed. Your next window opens at ' + hhmm(nx) + '.');
+          setText('wState', (other ? other + '-shift' : 'Other-shift') + ' window open until ' + hhmm(w.endMs) + '. You are on the ' + (myShiftNow() || '') + ' shift today: no entry needed. Your next window opens at ' + hhmm(nx) + '.');
           if (savedHere) { label = 'Entry saved, waiting to send'; hiLabel = 'एंट्री फ़ोन में सेव है'; }
           else if (doneO === STATUS.IN) { label = 'Entry done for this window'; hiLabel = 'इस समय की एंट्री हो गई'; }
           else { enabled = true; label = 'Record entry (not your shift)'; hiLabel = 'एंट्री दर्ज करें (आपकी शिफ्ट नहीं)'; }
@@ -499,9 +551,10 @@
     var s = st.schedule;
     if (s && s.configured) {
       var times = [];
-      for (var t = s.refStartMs; t < s.refStartMs + 86400000; t += s.periodMs) if (isMyWindow(t)) times.push(hhmm(t));
+      var alarmShift = myShiftNow() || st.usualShift;
+      for (var t = s.refStartMs; t < s.refStartMs + 86400000; t += s.periodMs) if (isMyWindow(t, alarmShift)) times.push(hhmm(t));
       times.sort();
-      setText('alarmText', 'This app cannot remind you by itself. Set phone alarms for your ' + (shiftText() || 'entry') + ' windows every day: ' + times.join(', ') + '. Each window stays open for ' + Math.round(s.windowMs / 60000) + ' minutes.');
+      setText('alarmText', 'This app cannot remind you by itself. Set phone alarms for your ' + (alarmShift && alarmShift !== 'Both' ? shiftName(alarmShift) : 'entry') + ' windows: ' + times.join(', ') + '. Each window stays open for ' + Math.round(s.windowMs / 60000) + ' minutes.' + (st.usualShift && st.usualShift !== 'Both' ? ' When your shift changes, your windows change with it.' : ''));
     } else setText('alarmText', 'Entry times will appear here once GPI sets them.');
   }
 
