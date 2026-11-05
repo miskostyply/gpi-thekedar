@@ -1,7 +1,7 @@
 /* Service worker: lets the app OPEN without internet (it cannot read GPS in the background - browsers do not allow that).
  * Strategy: network first for the app's own files, falling back to the saved copy when offline.
  * Calls to the Google Apps Script server are never cached. */
-var CACHE = 'gpi-entry-v2';
+var CACHE = 'gpi-entry-v3';
 var FILES = ['./', 'index.html', 'styles.css', 'app.js', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', function (e) {
